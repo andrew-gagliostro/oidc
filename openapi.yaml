@@ -1,0 +1,186 @@
+components:
+    examples: {}
+    headers: {}
+    parameters: {}
+    requestBodies: {}
+    responses: {}
+    schemas:
+        key:
+            properties:
+                y:
+                    type: string
+                x:
+                    type: string
+                kty:
+                    type: string
+                key_ops:
+                    items:
+                        type: string
+                    type: array
+                ext:
+                    type: boolean
+                d:
+                    type: string
+                    nullable: true
+                crv:
+                    type: string
+            required:
+                - y
+                - x
+                - kty
+                - key_ops
+                - ext
+                - crv
+            type: object
+        jwks:
+            properties:
+                keys:
+                    items:
+                        $ref: '#/components/schemas/key'
+                    type: array
+            required:
+                - keys
+            type: object
+    securitySchemes: {}
+info:
+    title: IODC
+    version: 1.0.0
+    description: 'IODC Provider'
+    license:
+        name: ISC
+    contact:
+        name: andrew-gagliostro
+openapi: 3.0.0
+paths:
+    /.well-known/openid-configuration:
+        get:
+            operationId: GetOidConfig
+            responses:
+                '200':
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                properties:
+                                    scopes_supported: {items: {type: string}, type: array}
+                                    jwks_uri: {type: string}
+                                    token_endpoint: {type: string}
+                                    authorization_endpoint: {type: string}
+                                    issuer: {type: string}
+                                required:
+                                    - scopes_supported
+                                    - jwks_uri
+                                    - token_endpoint
+                                    - authorization_endpoint
+                                    - issuer
+                                type: object
+            summary: 'Endpoint for client to retrieve OpenID Discovery Document'
+            security: []
+            parameters: []
+    /authorize:
+        get:
+            operationId: GetAuthorization
+            responses:
+                '200':
+                    description: OK
+            summary: 'Authorization enpoint : validation error will be thrown if any query param is missing'
+            security: []
+            parameters:
+                -
+                    description: 'URL to which server will redirect to following successful authorization'
+                    in: query
+                    name: redirect_uri
+                    required: true
+                    schema:
+                        type: string
+                -
+                    description: 'fixed - ''code'''
+                    in: query
+                    name: response_type
+                    required: true
+                    schema:
+                        type: string
+                -
+                    description: 'fixed - ''query'''
+                    in: query
+                    name: response_mode
+                    required: true
+                    schema:
+                        type: string
+                -
+                    description: '43-character string generated in client'
+                    in: query
+                    name: code_challenge
+                    required: true
+                    schema:
+                        type: string
+                -
+                    description: 'fixed - ''S256'''
+                    in: query
+                    name: code_challenge_method
+                    required: true
+                    schema:
+                        type: string
+                -
+                    description: 'fixed - ''openid'''
+                    in: query
+                    name: scope
+                    required: true
+                    schema:
+                        type: string
+    /jwks.json:
+        get:
+            operationId: GetJwks
+            responses:
+                '200':
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/jwks'
+                            examples:
+                                'Example 1':
+                                    value: {keys: [{crv: P-256, ext: true, key_ops: [verify], kty: EC, x: some-x-val, y: some-y-val}]}
+            summary: 'Returns a further JSON document representing the public key of JSON Web Key Set'
+            security: []
+            parameters: []
+    /token:
+        post:
+            operationId: GetAuthorization
+            responses:
+                '200':
+                    description: OK
+                    content:
+                        application/json:
+                            schema:
+                                properties:
+                                    id_token: {type: string}
+                                required:
+                                    - id_token
+                                type: object
+            summary: 'endpoint for client to retreive JWT for authentication with Identity Provider'
+            security: []
+            parameters: []
+            requestBody:
+                required: true
+                content:
+                    multipart/form-data:
+                        schema:
+                            type: object
+                            properties:
+                                code:
+                                    type: string
+                                    description: 'Authorization code that client retrieved through /authorization endpoint'
+                                code_verifier:
+                                    type: string
+                                    description: 'Code verifier that is to match code challenge associated with ''code'' according to the PKCE S256 Code Challenge method'
+                                grant_type:
+                                    type: string
+                                redirect_uri:
+                                    type: string
+                            required:
+                                - code
+                                - code_verifier
+servers:
+    -
+        url: 'http://localhost:8080/'
